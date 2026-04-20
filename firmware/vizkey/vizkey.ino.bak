@@ -6,13 +6,10 @@ USBHIDKeyboard keyboard;
 void setup() {
   keyboard.begin();
   USB.begin();
-  Serial.begin(115200);
   delay(2000);
-  Serial.println("VizKey USB HID ready");
 }
 
 void loop() {
-  keyboard.print("hello from vizkey");
-  keyboard.write(KEY_RETURN);
+  keyboard.print("a");
   delay(2000);
 }
