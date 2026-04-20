@@ -64,13 +64,13 @@ esp_err_t vizkey_matrix_init(void)
 {
     const uint64_t now_ms = vizkey_matrix_now_ms();
     portENTER_CRITICAL(&s_state_lock);
-    s_simulation_enabled = true;
+    s_simulation_enabled = false;
     vizkey_matrix_reset_simulator_locked(now_ms);
     portEXIT_CRITICAL(&s_state_lock);
 
     ESP_LOGI(
         TAG,
-        "Matrix scanner init (synthetic stream enabled; send matrix.sim.off over /ws to disable)");
+        "Matrix scanner init (synthetic stream disabled; send matrix.sim.on over /ws to enable)");
     return ESP_OK;
 }
 

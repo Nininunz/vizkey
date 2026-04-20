@@ -2,14 +2,18 @@
 
 #include "esp_log.h"
 
-static const char *TAG = "vizkey_hid";
-
+static const char *TAG = "vizkey_hid_ble";
 static const vizkey_hid_transport_t *s_transport;
+static bool s_ble_started;
 
 static esp_err_t vizkey_ble_start(void)
 {
 #if CONFIG_BT_ENABLED && CONFIG_BT_BLUEDROID_ENABLED
-    ESP_LOGI(TAG, "Starting BLE HID transport (seeded from Bluedroid HID device example)");
+    if (s_ble_started) {
+        return ESP_OK;
+    }
+    s_ble_started = true;
+    ESP_LOGI(TAG, "BLE HID transport start requested (advertising window open)");
     return ESP_OK;
 #else
     ESP_LOGE(TAG, "BLE HID requires BT + Bluedroid in sdkconfig");
@@ -19,13 +23,21 @@ static esp_err_t vizkey_ble_start(void)
 
 static esp_err_t vizkey_ble_stop(void)
 {
+    if (!s_ble_started) {
+        return ESP_OK;
+    }
+    s_ble_started = false;
+    ESP_LOGI(TAG, "BLE HID transport stop requested (standby)");
     return ESP_OK;
 }
 
 static esp_err_t vizkey_ble_send_keyboard(const uint8_t report[8])
 {
     (void)report;
-    // TODO: Connect this to esp_hidd_dev_input_set from the official example glue.
+    if (!s_ble_started) {
+        return ESP_OK;
+    }
+    // TODO: Wire this to the real esp_hidd_dev_input_set path.
     return ESP_OK;
 }
 
@@ -33,7 +45,10 @@ static esp_err_t vizkey_ble_send_consumer(uint16_t usage, bool pressed)
 {
     (void)usage;
     (void)pressed;
-    // TODO: Publish consumer usage report through the BLE HID report map.
+    if (!s_ble_started) {
+        return ESP_OK;
+    }
+    // TODO: Wire this to the BLE HID consumer report map.
     return ESP_OK;
 }
 
