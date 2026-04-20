@@ -17,3 +17,6 @@ typedef void (*vizkey_matrix_callback_t)(const vizkey_matrix_event_t *event, voi
 esp_err_t vizkey_matrix_init(void);
 esp_err_t vizkey_matrix_set_callback(vizkey_matrix_callback_t callback, void *ctx);
 esp_err_t vizkey_matrix_poll(void);
+esp_err_t vizkey_matrix_inject_event(const vizkey_matrix_event_t *event);
+esp_err_t vizkey_matrix_set_simulation_enabled(bool enabled);
+bool vizkey_matrix_is_simulation_enabled(void);

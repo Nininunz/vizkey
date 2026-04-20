@@ -4,6 +4,7 @@ idf_component_register(
     REQUIRES
         esp_event
         esp_netif
+        esp_wifi
         vizkey_backlight
         vizkey_hid
         vizkey_ir
