@@ -40,7 +40,7 @@ Reference:
 ## Hardware Plan
 
 - Donor device: Vizio XRT500 (XRT300 may be similar).
-- Replacement MCU: ESP32 module with BLE and enough GPIO (e.g., ESP32-WROOM or ESP32-S3).
+- Replacement MCU target: **ESP32-S3** (preferred for BLE now and optional USB HID later).
 - Intended reused components: membrane key matrix, backlight LEDs/control path, IR LED and associated driver path, and battery/contact assembly.
 - Likely additions: programming/debug header plus a breakout adapter or custom PCB for matrix/peripheral routing.
 
@@ -51,13 +51,15 @@ Teardown reference:
 
 ## Firmware and Software Plan
 
-- BLE HID implementation on ESP32 for keyboard/media input reports.
-- Matrix scan engine with debouncing and ghosting/rollover handling.
-- Backlight controller with configurable brightness/timeouts.
-- Profile storage via NVS/LittleFS/SPIFFS.
+- ESP-IDF 5.x firmware with componentized architecture.
+- BLE HID implementation seeded from Espressif's Bluedroid HID device example.
+- Matrix scan engine via `espressif/keyboard_button`.
+- Backlight controller via LEDC.
+- IR TX/RX integration via RMT.
+- Profile storage split between NVS + LittleFS.
 - Configurator web app over Web BLE where supported.
 - Fallback local AP + hosted web UI path.
-- Optional OTA updates where supported by selected ESP32 target and partition scheme.
+- OTA updates via `esp_https_ota`.
 
 ## Planned Features
 
@@ -69,11 +71,11 @@ Teardown reference:
 
 ## Status
 
-Current state: **concept and planning**.
+Current state: **initial ESP-IDF scaffold in progress**.
 
 Not yet done:
 - Matrix pinout reverse engineering.
-- Prototype firmware.
+- Full BLE HID datapath from matrix events to on-air reports.
 - Hardware adapter/PCB.
 - Configurator implementation.
 
@@ -81,13 +83,13 @@ Not yet done:
 
 1. Reverse-engineer the XRT500 matrix and connector pinout.
 2. Build a breakout or custom PCB for ESP32 integration.
-3. Ship firmware prototype: matrix scan + BLE HID basics.
+3. Complete firmware prototype: matrix scan + BLE HID basics.
 4. Add profile storage + minimal configurator.
 5. Iterate on power behavior, backlight UX, and IR integration.
 
 ## Repository Layout
 
-- `firmware/`: Embedded firmware experiments and target build setup.
+- `firmware/`: ESP-IDF project root (`main/`, `components/`, `sdkconfig.defaults`, `partitions.csv`).
 - `configurator/`: Browser configuration UI prototype.
 - `docs/teardown/`: Teardown notes, photos, pin maps, and measurements.
 

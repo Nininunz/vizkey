@@ -1,0 +1,9 @@
+#pragma once
+
+#define VIZKEY_DEVICE_NAME "VizKey"
+
+#define VIZKEY_BACKLIGHT_GPIO 2
+#define VIZKEY_BACKLIGHT_MAX_LEVEL 255
+
+#define VIZKEY_IR_TX_GPIO 4
+#define VIZKEY_IR_RX_GPIO 5

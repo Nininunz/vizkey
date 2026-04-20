@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VizKey Configurator</title>
+  </head>
+  <body>
+    <main>
+      <h1>VizKey Configurator</h1>
+      <button id="connect-ble" type="button">Connect via Web Bluetooth</button>
+      <p id="status">Idle</p>
+      <p>
+        If Web Bluetooth is unavailable, connect to the device AP and use the local HTTP
+        configuration endpoint.
+      </p>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
