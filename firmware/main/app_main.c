@@ -32,7 +32,6 @@ static const char *CMD_SIM_STATUS = "matrix.sim.status";
 static const char *CMD_BLE_STANDBY = "ble.standby";
 static const char *CMD_BLE_RECONNECT = "ble.reconnect";
 static const char *CMD_BLE_PAIR_OPEN = "ble.pair.open";
-static const char *CMD_BLE_CONNECTED = "ble.connected";
 static const char *CMD_BLE_STATUS = "ble.status";
 static const char *CMD_WIFI_AP_ON = "wifi.ap.on";
 static const char *CMD_WIFI_AP_OFF = "wifi.ap.off";
@@ -321,10 +320,17 @@ typedef enum {
     VIZKEY_BLE_STATE_CONNECTED,
 } vizkey_ble_state_t;
 
+typedef enum {
+    VIZKEY_BLE_LINK_EVENT_NONE = 0,
+    VIZKEY_BLE_LINK_EVENT_CONNECTED,
+    VIZKEY_BLE_LINK_EVENT_DISCONNECTED,
+} vizkey_ble_link_event_t;
+
 static portMUX_TYPE s_ble_state_lock = portMUX_INITIALIZER_UNLOCKED;
 static vizkey_ble_state_t s_ble_state = VIZKEY_BLE_STATE_STANDBY;
 static uint64_t s_ble_state_deadline_ms;
 static bool s_ble_transport_running;
+static vizkey_ble_link_event_t s_ble_link_event_pending = VIZKEY_BLE_LINK_EVENT_NONE;
 
 static const char *vizkey_ble_state_name(vizkey_ble_state_t state)
 {
@@ -366,6 +372,16 @@ static void vizkey_ble_get_status(vizkey_ble_state_t *out_state, uint64_t *out_d
     *out_state = s_ble_state;
     *out_deadline_ms = s_ble_state_deadline_ms;
     *out_transport_running = s_ble_transport_running;
+    portEXIT_CRITICAL(&s_ble_state_lock);
+}
+
+static void vizkey_on_hid_ble_connection(bool connected, void *ctx)
+{
+    (void)ctx;
+
+    portENTER_CRITICAL(&s_ble_state_lock);
+    s_ble_link_event_pending =
+        connected ? VIZKEY_BLE_LINK_EVENT_CONNECTED : VIZKEY_BLE_LINK_EVENT_DISCONNECTED;
     portEXIT_CRITICAL(&s_ble_state_lock);
 }
 
@@ -439,6 +455,35 @@ static esp_err_t vizkey_ble_set_state(vizkey_ble_state_t next_state)
 
 static void vizkey_ble_poll(void)
 {
+    vizkey_ble_link_event_t link_event = VIZKEY_BLE_LINK_EVENT_NONE;
+    portENTER_CRITICAL(&s_ble_state_lock);
+    link_event = s_ble_link_event_pending;
+    s_ble_link_event_pending = VIZKEY_BLE_LINK_EVENT_NONE;
+    portEXIT_CRITICAL(&s_ble_state_lock);
+
+    if (link_event != VIZKEY_BLE_LINK_EVENT_NONE) {
+        vizkey_ble_state_t state;
+        uint64_t deadline_ms;
+        bool transport_running;
+        vizkey_ble_get_status(&state, &deadline_ms, &transport_running);
+        (void)deadline_ms;
+        (void)transport_running;
+
+        if (link_event == VIZKEY_BLE_LINK_EVENT_CONNECTED) {
+            if (state != VIZKEY_BLE_STATE_CONNECTED) {
+                ESP_LOGI(TAG, "BLE link established; entering connected state");
+                if (vizkey_ble_set_state(VIZKEY_BLE_STATE_CONNECTED) != ESP_OK) {
+                    ESP_LOGW(TAG, "Failed to transition BLE state to connected");
+                }
+            }
+        } else if (state != VIZKEY_BLE_STATE_STANDBY) {
+            ESP_LOGI(TAG, "BLE link dropped; entering standby state");
+            if (vizkey_ble_set_state(VIZKEY_BLE_STATE_STANDBY) != ESP_OK) {
+                ESP_LOGW(TAG, "Failed to transition BLE state to standby");
+            }
+        }
+    }
+
     vizkey_ble_state_t state;
     uint64_t deadline_ms;
     bool transport_running;
@@ -771,9 +816,6 @@ static esp_err_t vizkey_on_ws_command(const char *payload, size_t len)
     if (vizkey_ws_cmd_equals(payload, len, CMD_BLE_PAIR_OPEN)) {
         return vizkey_ble_set_state(VIZKEY_BLE_STATE_PAIRING);
     }
-    if (vizkey_ws_cmd_equals(payload, len, CMD_BLE_CONNECTED)) {
-        return vizkey_ble_set_state(VIZKEY_BLE_STATE_CONNECTED);
-    }
     if (vizkey_ws_cmd_equals(payload, len, CMD_BLE_STATUS)) {
         vizkey_ble_state_t state;
         uint64_t deadline_ms;
@@ -860,6 +902,7 @@ void app_main(void)
     VIZKEY_TRY_INIT(vizkey_profiles_init());
 
     VIZKEY_TRY_INIT(vizkey_hid_set_transport(vizkey_hid_ble_transport()));
+    VIZKEY_TRY_INIT(vizkey_hid_set_connection_callback(vizkey_on_hid_ble_connection, NULL));
     VIZKEY_TRY_INIT(vizkey_ble_set_state(VIZKEY_BLE_STATE_STANDBY));
 
     VIZKEY_TRY_INIT(vizkey_ir_init(VIZKEY_IR_TX_GPIO, VIZKEY_IR_RX_GPIO));
@@ -880,6 +923,6 @@ void app_main(void)
     ESP_LOGI(
         TAG,
         "VizKey scaffold initialized (WS commands: matrix.sim.on/off/toggle/status, "
-        "ble.standby/reconnect/pair.open/connected/status, wifi.ap.on/off/status, "
+        "ble.standby/reconnect/pair.open/status, wifi.ap.on/off/status, "
         "led.gpio.<n>)");
 }

@@ -24,12 +24,13 @@ Commands to control policy from WS:
 - `ble.standby`
 - `ble.reconnect`
 - `ble.pair.open`
-- `ble.connected`
 - `ble.status`
 - `wifi.ap.on`
 - `wifi.ap.off`
 - `wifi.ap.status`
 - `led.gpio.<n>` (debug pin override only)
+
+`connected` and fallback to `standby` are driven by BLE link callbacks, not direct WS mode commands.
 
 ## Phase 0: Baseline (Done)
 
